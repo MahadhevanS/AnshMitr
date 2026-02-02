@@ -175,6 +175,17 @@ export default function ExpenseInputScreen() {
       return;
     }
 
+    const currentUserInvolved = members.some(
+      m => m.user_id === currentUserId && m.is_involved
+    );
+
+    if (!currentUserInvolved) {
+      Alert.alert(
+        'You must be included',
+        'You must be part of the expense split.'
+      );
+      return;
+    }
     // ✅ IMPORTANT FIX: payer is NOT a debtor
     const debtors = members.filter(
       m => m.is_involved && m.user_id !== payerId
@@ -182,6 +193,7 @@ export default function ExpenseInputScreen() {
 
     setIsSaving(true);
 
+    
     try {
       const shareAmount = parsedAmount / (debtors.length + 1);
 
