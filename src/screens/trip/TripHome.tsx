@@ -146,29 +146,47 @@ export default function TripDetailScreen() {
 
   /* -------------------- CALCULATION LOGIC -------------------- */
 
-  const calculatePeerNet = (targetId: string, currentId: string | null, expensesArr: any[]) => {
-    if (!currentId || !targetId) return 0;
+const calculatePeerNet = (
+  targetId: string,
+  currentId: string | null,
+  expensesArr: any[]
+) => {
+  if (!currentId || !targetId) return 0;
 
-    return expensesArr.reduce((acc, exp) => {
-      const involved = exp.consents || [];
-      const shareCount = involved.length + 1; 
-      if (shareCount === 1) return acc;
+  return expensesArr.reduce((acc, exp) => {
+    const debtors = exp.consents || [];
 
-      const shareAmount = exp.amount / shareCount;
+    // ✅ Total people involved = payer + debtors
+    const participants = new Set<string>([
+      exp.payer_id,
+      ...debtors.map((d: any) => d.debtor_user_id),
+    ]);
 
-      if (exp.payer_id === currentId) {
-        const isTargetDebtor = involved.some((c: any) => c.debtor_user_id === targetId);
-        if (isTargetDebtor) return acc + shareAmount;
-      }
+    // ✅ If only one person involved → skip
+    if (participants.size <= 1) return acc;
 
-      if (exp.payer_id === targetId) {
-        const amIDebtor = involved.some((c: any) => c.debtor_user_id === currentId);
-        if (amIDebtor) return acc - shareAmount;
-      }
+    const shareAmount = exp.amount / participants.size;
 
-      return acc;
-    }, 0);
-  };
+    // Case 1: I paid, target is debtor → target owes me
+    if (
+      exp.payer_id === currentId &&
+      debtors.some((d: any) => d.debtor_user_id === targetId)
+    ) {
+      return acc + shareAmount;
+    }
+
+    // Case 2: Target paid, I am debtor → I owe target
+    if (
+      exp.payer_id === targetId &&
+      debtors.some((d: any) => d.debtor_user_id === currentId)
+    ) {
+      return acc - shareAmount;
+    }
+
+    return acc;
+  }, 0);
+};
+
 
   /* -------------------- REMOVE MEMBER LOGIC -------------------- */
 
